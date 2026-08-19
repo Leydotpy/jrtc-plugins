@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jrtc-stream"
+version = "0.2.0"
+description = "Typed Janus Streaming plugin and async toolkit for jrtc"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.14"
+authors = [{ name = "S.A" }]
+dependencies = [
+  "jrtc>=3.1,<4",
+  "pydantic>=2.12,<3",
+]
+
+[project.entry-points."jrtc.plugins"]
+streaming = "janus_streaming._compat:StreamingPlugin"
+
+[project.optional-dependencies]
+test = ["pytest>=8.3,<9", "pytest-asyncio>=0.25,<2"]
+dev = ["jrtc-stream[test]", "mypy>=1.15,<2", "ruff>=0.11,<1"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/janus_streaming"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]

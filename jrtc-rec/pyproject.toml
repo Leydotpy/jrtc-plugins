@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jrtc-rec"
+version = "3.0.0"
+description = "Typed async client for the Janus Record&Play plugin"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Leydotpy", email = "leydotpy.dev@gmail.com" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Framework :: AsyncIO",
+  "Programming Language :: Python :: 3 :: Only",
+  "Typing :: Typed",
+]
+dependencies = ["jrtc>=3.1,<4", "pydantic>=2.12,<3"]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "build>=1.2"]
+
+[project.entry-points."jrtc.plugins"]
+recordplay = "jrtc_rec:RecordPlayPlugin"
+
+[project.urls]
+Documentation = "https://janus.conf.meetecho.com/docs/recordplay.html"
+Recordings = "https://janus.conf.meetecho.com/docs/recordings.html"
+JanusGateway = "https://janus.conf.meetecho.com/"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+janus_recordplay_plugin = ["py.typed"]

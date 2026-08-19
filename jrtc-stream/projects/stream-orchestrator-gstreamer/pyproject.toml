@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stream-orchestrator-gstreamer"
+version = "0.1.0"
+description = "Profile-driven GStreamer source driver for stream-orchestrator"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [{ name = "S.A" }]
+dependencies = [
+  "stream-orchestrator>=0.1.0,<0.2",
+  "stream-orchestrator-process>=0.1.0,<0.2",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.3,<9"]
+dev = ["stream-orchestrator-gstreamer[test]", "mypy>=1.15,<2", "ruff>=0.11,<1"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stream_orchestrator_gstreamer"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]

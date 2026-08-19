@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stream-orchestrator-qt"
+version = "0.1.0"
+description = "Qt-safe async bridge for stream-orchestrator"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [{ name = "S.A" }]
+dependencies = ["stream-orchestrator>=0.1.0,<0.2"]
+
+[project.optional-dependencies]
+pyside6 = ["PySide6>=6.8,<7"]
+pyqt6 = ["PyQt6>=6.8,<7"]
+test = ["pytest>=8.3,<9"]
+dev = ["stream-orchestrator-qt[test]", "mypy>=1.15,<2", "ruff>=0.11,<1"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stream_orchestrator_qt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[[tool.mypy.overrides]]
+module = [
+  "stream_orchestrator_qt.pyside6",
+  "stream_orchestrator_qt.pyqt6",
+]
+ignore_errors = true

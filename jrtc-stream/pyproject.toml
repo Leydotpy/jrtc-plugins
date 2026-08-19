@@ -1,0 +1,84 @@
+[project]
+name = "jrtc-stream-workspace"
+version = "0.1.0"
+description = "Development workspace for modular Janus Streaming and source orchestration packages"
+requires-python = ">=3.14"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = [
+  "projects/stream-orchestrator",
+  "projects/stream-orchestrator-process",
+  "projects/stream-orchestrator-ffmpeg",
+  "projects/stream-orchestrator-gstreamer",
+  "projects/stream-orchestrator-srs",
+  "projects/jrtc-stream",
+  "projects/janus-stream-orchestrator",
+  "projects/stream-orchestrator-django",
+  "projects/stream-orchestrator-qt",
+]
+
+[tool.uv.sources]
+jrtc = { path = "../../main/v3.1", editable = true }
+stream-orchestrator = { workspace = true }
+stream-orchestrator-process = { workspace = true }
+stream-orchestrator-ffmpeg = { workspace = true }
+stream-orchestrator-gstreamer = { workspace = true }
+stream-orchestrator-srs = { workspace = true }
+jrtc-stream = { workspace = true }
+janus-stream-orchestrator = { workspace = true }
+stream-orchestrator-django = { workspace = true }
+stream-orchestrator-qt = { workspace = true }
+
+[dependency-groups]
+dev = [
+  "build>=1.2,<2,!=1.5.1",
+  "Django>=6.1,<7",
+  "jrtc-stream",
+  "janus-stream-orchestrator",
+  "mypy>=1.15,<2",
+  "pytest>=8.3,<10",
+  "pytest-asyncio>=0.25,<2",
+  "ruff>=0.11,<1",
+  "stream-orchestrator",
+  "stream-orchestrator-django",
+  "stream-orchestrator-ffmpeg",
+  "stream-orchestrator-gstreamer",
+  "stream-orchestrator-process",
+  "stream-orchestrator-qt",
+  "stream-orchestrator-srs",
+  "twine>=7,<8",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = ["--import-mode=importlib"]
+testpaths = ["projects"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["dist", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"projects/stream-orchestrator-django/src/stream_orchestrator_django/models.py" = ["RUF012"]
+"projects/stream-orchestrator-django/src/stream_orchestrator_django/migrations/*.py" = ["RUF012"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_unreachable = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+  "stream_orchestrator_qt.pyside6",
+  "stream_orchestrator_qt.pyqt6",
+]
+ignore_errors = true
