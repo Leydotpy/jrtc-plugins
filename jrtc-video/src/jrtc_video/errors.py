@@ -21,24 +21,22 @@ class VideoRoomProtocolError(VideoRoomError):
         self.message = message
         logger.error(
             "Janus protocol error",
-            message,
+            message=message,
         )
 
 
 class VideoRoomJanusError(VideoRoomError):
     """The outer Janus API returned an error envelope."""
 
-    def __init__(
-        self, code: int, reason: str, *, transaction: str | None = None
-    ) -> None:
+    def __init__(self, code: int, reason: str, *, transaction: str | None = None) -> None:
         super().__init__(f"Janus error {code}: {reason}")
         self.code = code
         self.reason = reason
         self.transaction = transaction
 
         logger.error(
-            f"Janus room error {code}",
-            reason,
+            "Janus room error",
+            message=reason,
             context={"transaction": transaction, "code": code},
         )
 
@@ -62,8 +60,8 @@ class VideoRoomPluginError(VideoRoomError):
 
         logger.error(
             "Janus plugin error",
-            reason,
-            context={"transaction": transaction, "code": code, "raw": raw},
+            message=reason,
+            context={"transaction": transaction, "code": code},
         )
 
 
@@ -75,5 +73,5 @@ class VideoRoomLifecycleError(VideoRoomError):
         self.message = message
         logger.error(
             "Janus lifecycle error",
-            message,
+            message=message,
         )

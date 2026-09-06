@@ -10,9 +10,9 @@ members = [
     "jrtc-nosip",
     "jrtc-plugins-workspace",
     "jrtc-rec",
-    "jrtc-room",
     "jrtc-sip",
     "jrtc-text",
+    "jrtc-video",
 ]
 
 [[package]]
@@ -413,7 +413,7 @@ wheels = [
 
 [[package]]
 name = "jrtc"
-version = "3.1.0"
+version = "3.1.1"
 source = { editable = "../main/v3.1" }
 dependencies = [
     { name = "broka" },
@@ -594,30 +594,6 @@ requires-dist = [
 provides-extras = ["test"]
 
 [[package]]
-name = "jrtc-room"
-version = "3.0.0"
-source = { editable = "jrtc-room" }
-dependencies = [
-    { name = "jrtc" },
-    { name = "pydantic" },
-]
-
-[package.optional-dependencies]
-test = [
-    { name = "build" },
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "build", marker = "extra == 'test'", specifier = ">=1.2" },
-    { name = "jrtc", editable = "../main/v3.1" },
-    { name = "pydantic", specifier = ">=2.7,<3" },
-    { name = "pytest", marker = "extra == 'test'", specifier = ">=8" },
-]
-provides-extras = ["test"]
-
-[[package]]
 name = "jrtc-sip"
 version = "3.0.0"
 source = { editable = "jrtc-sip" }
@@ -661,6 +637,32 @@ requires-dist = [
     { name = "build", marker = "extra == 'test'", specifier = ">=1.2" },
     { name = "jrtc", editable = "../main/v3.1" },
     { name = "pydantic", specifier = ">=2.12,<3" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=8" },
+]
+provides-extras = ["test"]
+
+[[package]]
+name = "jrtc-video"
+version = "3.0.1"
+source = { editable = "jrtc-video" }
+dependencies = [
+    { name = "jrtc" },
+    { name = "logvista" },
+    { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+test = [
+    { name = "build" },
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "build", marker = "extra == 'test'", specifier = ">=1.2" },
+    { name = "jrtc", editable = "../main/v3.1" },
+    { name = "logvista", specifier = "==0.1.0" },
+    { name = "pydantic", specifier = ">=2.7,<3" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8" },
 ]
 provides-extras = ["test"]

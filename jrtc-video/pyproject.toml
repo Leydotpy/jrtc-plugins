@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jrtc-video"
-version = "3.0.1"
+version = "3.0.2"
 description = "Typed VideoRoom plugin client and lifecycle service for jrtc"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -37,7 +37,7 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-jrtc_room = ["py.typed"]
+jrtc_video = ["py.typed"]
 
 [tool.ruff]
 target-version = "py312"

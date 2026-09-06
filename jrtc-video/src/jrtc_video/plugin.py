@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, TypeAlias
+from typing import Literal
 
 from jrtc.lib import Plugin
 from jrtc.models.base import Jsep
@@ -49,15 +49,12 @@ from .models import (
     parse_videoroom_response,
 )
 
-
-JsepRole: TypeAlias = Literal["offer", "answer"]
+type JsepRole = Literal["offer", "answer"]
 
 
 def _jsep(value: Jsep, expected: JsepRole) -> Jsep:
     if value.type != expected:
-        raise VideoRoomProtocolError(
-            f"expected a JSEP {expected}, received {value.type!r}"
-        )
+        raise VideoRoomProtocolError(f"expected a JSEP {expected}, received {value.type!r}")
     if not value.sdp.strip():
         raise VideoRoomProtocolError("JSEP SDP must not be blank")
     return value
@@ -166,16 +163,12 @@ class VideoRoomPlugin(Plugin):
         admin_key: str | None = None,
         timeout: float | None = None,
     ) -> VideoRoomReply[VideoRoomResponse]:
-        return await self.request(
-            VideoRoomListRequest(admin_key=admin_key), timeout=timeout
-        )
+        return await self.request(VideoRoomListRequest(admin_key=admin_key), timeout=timeout)
 
     async def list_participants(
         self, room: JanusId, *, timeout: float | None = None
     ) -> VideoRoomReply[VideoRoomResponse]:
-        return await self.request(
-            VideoRoomListParticipantsRequest(room=room), timeout=timeout
-        )
+        return await self.request(VideoRoomListParticipantsRequest(room=room), timeout=timeout)
 
     async def rtp_forward(
         self, body: VideoRoomRtpForwardRequest, *, timeout: float | None = None
@@ -237,14 +230,10 @@ class VideoRoomPlugin(Plugin):
     ) -> VideoRoomReply[VideoRoomResponse]:
         return await self.request(body, jsep=_jsep(offer, "offer"), timeout=timeout)
 
-    async def unpublish(
-        self, *, timeout: float | None = None
-    ) -> VideoRoomReply[VideoRoomResponse]:
+    async def unpublish(self, *, timeout: float | None = None) -> VideoRoomReply[VideoRoomResponse]:
         return await self.request(PublisherUnpublishRequest(), timeout=timeout)
 
-    async def leave(
-        self, *, timeout: float | None = None
-    ) -> VideoRoomReply[VideoRoomResponse]:
+    async def leave(self, *, timeout: float | None = None) -> VideoRoomReply[VideoRoomResponse]:
         return await self.request(VideoRoomLeaveRequest(), timeout=timeout)
 
     async def start(
@@ -261,9 +250,7 @@ class VideoRoomPlugin(Plugin):
             timeout=timeout,
         )
 
-    async def pause(
-        self, *, timeout: float | None = None
-    ) -> VideoRoomReply[VideoRoomResponse]:
+    async def pause(self, *, timeout: float | None = None) -> VideoRoomReply[VideoRoomResponse]:
         return await self.request(SubscriberPauseRequest(), timeout=timeout)
 
     async def subscribe(

@@ -2,17 +2,26 @@
 
 from .errors import (
     VideoRoomError as VideoRoomError,
+)
+from .errors import (
     VideoRoomJanusError as VideoRoomJanusError,
+)
+from .errors import (
     VideoRoomLifecycleError as VideoRoomLifecycleError,
+)
+from .errors import (
     VideoRoomPluginError as VideoRoomPluginError,
+)
+from .errors import (
     VideoRoomProtocolError as VideoRoomProtocolError,
 )
-from .models import *  # noqa: F403 - the package intentionally re-exports wire models
+from .models import *  # noqa: F403 - package intentionally re-exports wire models
 from .models import parse_videoroom_response as parse_videoroom_response
 from .plugin import VideoRoomPlugin as VideoRoomPlugin
 from .service import Publisher as Publisher
 from .service import Subscriber as Subscriber
 from .service import VideoRoomService as VideoRoomService
+from .service import VideoRoomServiceMetrics as VideoRoomServiceMetrics
 
 __all__ = sorted(
     name

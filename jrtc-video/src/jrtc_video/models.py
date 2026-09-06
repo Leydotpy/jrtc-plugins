@@ -12,20 +12,19 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Annotated, Any, Generic, Literal, TypeAlias, TypeVar
 
-from pydantic import BaseModel, Field, StringConstraints, ValidationError, model_validator
-
 from jrtc.models.base import Jsep
 from jrtc.models.common import JanusId, LooseBaseModel, StrictBaseModel
+from pydantic import BaseModel, Field, StringConstraints, ValidationError, model_validator
 
 from .errors import VideoRoomJanusError, VideoRoomPluginError, VideoRoomProtocolError
 
-JsonObject: TypeAlias = dict[str, Any]
-RemoteId: TypeAlias = Annotated[
+JsonObject: TypeAlias = dict[str, Any]  # noqa: UP040 - preserve public runtime alias
+RemoteId: TypeAlias = Annotated[  # noqa: UP040 - preserve public runtime alias
     str, StringConstraints(strip_whitespace=True, min_length=1, strict=True)
 ]
-MediaType: TypeAlias = Literal["audio", "video", "data"]
-HostFamily: TypeAlias = Literal["ipv4", "ipv6"]
-SrtpSuite: TypeAlias = Literal[32, 80]
+MediaType: TypeAlias = Literal["audio", "video", "data"]  # noqa: UP040
+HostFamily: TypeAlias = Literal["ipv4", "ipv6"]  # noqa: UP040
+SrtpSuite: TypeAlias = Literal[32, 80]  # noqa: UP040
 
 
 class AudioCodec(StrEnum):
@@ -91,7 +90,7 @@ class VideoRoomCreateRequest(StrictBaseModel):
     admin_key: str | None = None
 
     @model_validator(mode="after")
-    def _dummy_streams_require_publisher(self) -> "VideoRoomCreateRequest":
+    def _dummy_streams_require_publisher(self) -> VideoRoomCreateRequest:
         if self.dummy_streams is not None and self.dummy_publisher is not True:
             raise ValueError("dummy_streams requires dummy_publisher=True")
         return self
@@ -136,7 +135,7 @@ class VideoRoomAllowedRequest(StrictBaseModel):
     allowed: list[str] | None = None
 
     @model_validator(mode="after")
-    def _tokens_match_action(self) -> "VideoRoomAllowedRequest":
+    def _tokens_match_action(self) -> VideoRoomAllowedRequest:
         if self.action in {"add", "remove"} and self.allowed is None:
             raise ValueError("allowed is required for add and remove actions")
         if self.action in {"enable", "disable"} and self.allowed is not None:
@@ -194,7 +193,7 @@ class RtpForwardStream(StrictBaseModel):
     pt_3: int | None = Field(default=None, ge=0, le=127)
 
     @model_validator(mode="after")
-    def _simulcast_mode(self) -> "RtpForwardStream":
+    def _simulcast_mode(self) -> RtpForwardStream:
         separate_layers = any(
             value is not None
             for value in (
@@ -207,18 +206,10 @@ class RtpForwardStream(StrictBaseModel):
             )
         )
         if self.simulcast is True and separate_layers:
-            raise ValueError(
-                "simulcast=True cannot be combined with separate layer targets"
-            )
-        if (
-            any(value is not None for value in (self.ssrc_2, self.pt_2))
-            and self.port_2 is None
-        ):
+            raise ValueError("simulcast=True cannot be combined with separate layer targets")
+        if any(value is not None for value in (self.ssrc_2, self.pt_2)) and self.port_2 is None:
             raise ValueError("port_2 is required for second-layer SSRC or payload type")
-        if (
-            any(value is not None for value in (self.ssrc_3, self.pt_3))
-            and self.port_3 is None
-        ):
+        if any(value is not None for value in (self.ssrc_3, self.pt_3)) and self.port_3 is None:
             raise ValueError("port_3 is required for third-layer SSRC or payload type")
         return self
 
@@ -235,11 +226,9 @@ class VideoRoomRtpForwardRequest(StrictBaseModel):
     admin_key: str | None = None
 
     @model_validator(mode="after")
-    def _targets_and_srtp(self) -> "VideoRoomRtpForwardRequest":
+    def _targets_and_srtp(self) -> VideoRoomRtpForwardRequest:
         if self.host is None and any(stream.host is None for stream in self.streams):
-            raise ValueError(
-                "each stream needs host when the request has no global host"
-            )
+            raise ValueError("each stream needs host when the request has no global host")
         if (self.srtp_suite is None) != (self.srtp_crypto is None):
             raise ValueError("srtp_suite and srtp_crypto must be provided together")
         return self
@@ -280,7 +269,7 @@ class UnsubscribeTarget(StrictBaseModel):
     sub_mid: str | None = None
 
     @model_validator(mode="after")
-    def _addressed(self) -> "UnsubscribeTarget":
+    def _addressed(self) -> UnsubscribeTarget:
         if self.feed is None and self.sub_mid is None:
             raise ValueError("unsubscribe target requires feed or sub_mid")
         if self.mid is not None and self.feed is None:
@@ -332,7 +321,7 @@ class SubscriberJoinRequest(StrictBaseModel):
     offer_data: bool | None = None
 
     @model_validator(mode="after")
-    def _has_source(self) -> "SubscriberJoinRequest":
+    def _has_source(self) -> SubscriberJoinRequest:
         if self.streams is None and self.feed is None:
             raise ValueError("subscriber join requires streams or the legacy feed")
         return self
@@ -351,7 +340,7 @@ class PublisherStreamControl(StrictBaseModel):
     max_delay: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
-    def _delay_order(self) -> "PublisherStreamControl":
+    def _delay_order(self) -> PublisherStreamControl:
         if (
             self.min_delay is not None
             and self.max_delay is not None
@@ -442,7 +431,7 @@ class SubscriberUpdateRequest(StrictBaseModel):
     unsubscribe: list[UnsubscribeTarget] | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
-    def _has_change(self) -> "SubscriberUpdateRequest":
+    def _has_change(self) -> SubscriberUpdateRequest:
         if self.subscribe is None and self.unsubscribe is None:
             raise ValueError("update requires subscribe, unsubscribe, or both")
         return self
@@ -467,7 +456,7 @@ class SubscriberStreamControl(StrictBaseModel):
     max_delay: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
-    def _delay_order(self) -> "SubscriberStreamControl":
+    def _delay_order(self) -> SubscriberStreamControl:
         if (
             self.min_delay is not None
             and self.max_delay is not None
@@ -483,7 +472,7 @@ class SubscriberConfigureRequest(StrictBaseModel):
     restart: bool | None = None
 
     @model_validator(mode="after")
-    def _has_operation(self) -> "SubscriberConfigureRequest":
+    def _has_operation(self) -> SubscriberConfigureRequest:
         if self.streams is None and self.restart is not True:
             raise ValueError("configure requires stream controls or restart=True")
         return self
@@ -522,7 +511,7 @@ class AddRemotePublisherRequest(StrictBaseModel):
     srtp_crypto: str | None = None
 
     @model_validator(mode="after")
-    def _complete_srtp(self) -> "AddRemotePublisherRequest":
+    def _complete_srtp(self) -> AddRemotePublisherRequest:
         if (self.srtp_suite is None) != (self.srtp_crypto is None):
             raise ValueError("srtp_suite and srtp_crypto must be provided together")
         return self
@@ -540,7 +529,7 @@ class UpdateRemotePublisherRequest(StrictBaseModel):
     streams: list[RemotePublisherStream] | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
-    def _complete_srtp(self) -> "UpdateRemotePublisherRequest":
+    def _complete_srtp(self) -> UpdateRemotePublisherRequest:
         if (self.srtp_suite is None) != (self.srtp_crypto is None):
             raise ValueError("srtp_suite and srtp_crypto must be provided together")
         return self
@@ -567,7 +556,7 @@ class PublishRemotelyRequest(StrictBaseModel):
     srtp_crypto: str | None = None
 
     @model_validator(mode="after")
-    def _complete_srtp(self) -> "PublishRemotelyRequest":
+    def _complete_srtp(self) -> PublishRemotelyRequest:
         if (self.srtp_suite is None) != (self.srtp_crypto is None):
             raise ValueError("srtp_suite and srtp_crypto must be provided together")
         return self
@@ -588,7 +577,7 @@ class ListRemotesRequest(StrictBaseModel):
     secret: str | None = None
 
 
-VideoRoomRequest: TypeAlias = (
+VideoRoomRequest: TypeAlias = (  # noqa: UP040 - preserve public runtime alias
     VideoRoomCreateRequest
     | VideoRoomEditRequest
     | VideoRoomDestroyRequest
@@ -914,7 +903,7 @@ class UnknownVideoRoomResponse(LooseBaseModel):
     videoroom: str | None = None
 
 
-VideoRoomResponse: TypeAlias = (
+VideoRoomResponse: TypeAlias = (  # noqa: UP040 - preserve public runtime alias
     VideoRoomCreated
     | VideoRoomEdited
     | VideoRoomDestroyed
@@ -946,7 +935,7 @@ ResponseT = TypeVar("ResponseT", bound=BaseModel)
 
 
 @dataclass(frozen=True, slots=True)
-class VideoRoomReply(Generic[ResponseT]):
+class VideoRoomReply(Generic[ResponseT]):  # noqa: UP046 - preserve public generic API
     """Typed plugin data plus metadata from the surrounding Janus event."""
 
     data: ResponseT
@@ -999,9 +988,7 @@ def parse_videoroom_response(payload: Any) -> VideoRoomReply[VideoRoomResponse]:
         plugin_data = _mapping(outer.get("plugindata"), context="plugindata")
         plugin = plugin_data.get("plugin")
         if plugin != "janus.plugin.videoroom":
-            raise VideoRoomProtocolError(
-                f"expected janus.plugin.videoroom, received {plugin!r}"
-            )
+            raise VideoRoomProtocolError(f"expected janus.plugin.videoroom, received {plugin!r}")
         data = _mapping(plugin_data.get("data"), context="plugin data")
         jsep_payload = outer.get("jsep")
     else:

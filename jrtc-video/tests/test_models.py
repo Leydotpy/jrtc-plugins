@@ -7,12 +7,11 @@ from pydantic import ValidationError
 from jrtc_video import (
     AddRemotePublisherRequest,
     ListRemotesRequest,
-    PublishRemotelyRequest,
     PublisherPublishRequest,
+    PublishRemotelyRequest,
     RemotePublisherStream,
     RemoveRemotePublisherRequest,
     RtpForwardStream,
-    SubscribeTarget,
     SubscriberConfigureRequest,
     SubscriberJoinRequest,
     SubscriberStreamControl,
@@ -20,6 +19,7 @@ from jrtc_video import (
     SubscriberSwitchRequest,
     SubscriberUnsubscribeRequest,
     SubscriberUpdateRequest,
+    SubscribeTarget,
     SwitchTarget,
     UnpublishRemotelyRequest,
     UnsubscribeTarget,
@@ -49,7 +49,8 @@ class VideoRoomRequestTests(unittest.TestCase):
         for invalid in ("1234", True):
             with self.assertRaises(ValidationError):
                 VideoRoomEditRequest(
-                    room=invalid, new_description="name"  # type: ignore[arg-type]
+                    room=invalid,
+                    new_description="name",  # type: ignore[arg-type]
                 )
             with self.assertRaises(ValidationError):
                 SubscribeTarget(feed=invalid)  # type: ignore[arg-type]
@@ -91,9 +92,7 @@ class VideoRoomRequestTests(unittest.TestCase):
                 "streams": [{"feed": 2}],
             },
         )
-        configure = SubscriberConfigureRequest(
-            streams=[SubscriberStreamControl(mid="1")]
-        )
+        configure = SubscriberConfigureRequest(streams=[SubscriberStreamControl(mid="1")])
         self.assertEqual(
             wire(configure),
             {"request": "configure", "streams": [{"mid": "1"}]},
@@ -101,15 +100,9 @@ class VideoRoomRequestTests(unittest.TestCase):
         self.assertNotIn("restart", wire(configure))
 
     def test_subscribe_unsubscribe_and_switch_use_distinct_targets(self) -> None:
-        subscribe = SubscriberSubscribeRequest(
-            streams=[SubscribeTarget(feed=2, mid="video")]
-        )
-        unsubscribe = SubscriberUnsubscribeRequest(
-            streams=[UnsubscribeTarget(sub_mid="1")]
-        )
-        switch = SubscriberSwitchRequest(
-            streams=[SwitchTarget(feed=3, mid="video", sub_mid="1")]
-        )
+        subscribe = SubscriberSubscribeRequest(streams=[SubscribeTarget(feed=2, mid="video")])
+        unsubscribe = SubscriberUnsubscribeRequest(streams=[UnsubscribeTarget(sub_mid="1")])
+        switch = SubscriberSwitchRequest(streams=[SwitchTarget(feed=3, mid="video", sub_mid="1")])
         self.assertEqual(wire(subscribe)["streams"], [{"feed": 2, "mid": "video"}])
         self.assertEqual(wire(unsubscribe)["streams"], [{"sub_mid": "1"}])
         self.assertEqual(
@@ -269,13 +262,9 @@ class VideoRoomResponseTests(unittest.TestCase):
 
     def test_typed_errors(self) -> None:
         with self.assertRaises(VideoRoomJanusError):
-            parse_videoroom_response(
-                {"janus": "error", "error": {"code": 403, "reason": "denied"}}
-            )
+            parse_videoroom_response({"janus": "error", "error": {"code": 403, "reason": "denied"}})
         with self.assertRaises(VideoRoomPluginError):
-            parse_videoroom_response(
-                {"videoroom": "event", "error_code": 426, "error": "no room"}
-            )
+            parse_videoroom_response({"videoroom": "event", "error_code": 426, "error": "no room"})
         with self.assertRaises(VideoRoomProtocolError):
             parse_videoroom_response(
                 {
