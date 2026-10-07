@@ -1,0 +1,1 @@
+{"case": "cancel-close-while-management-busy", "closed": true, "cached_management_plugin_remains": true, "second_close_performs_cleanup": false}

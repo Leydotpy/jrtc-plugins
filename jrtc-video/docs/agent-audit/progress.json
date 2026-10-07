@@ -1,0 +1,232 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-10-07",
+  "repository": "Leydotpy/jrtc-plugins",
+  "scope": "jrtc-video/",
+  "audited_branch": "main",
+  "audited_commit": "bec03a533ab3af33c1deef822e8249f123a007dc",
+  "instruction_revision": "2026-10-07.1",
+  "contract_revision": "2026-10-07.1",
+  "source_requirements_sha256": "4e97ecfcb9f2e04bf01f1145a999e5fbd167becd8b652bf7143c7717952ea1fd",
+  "audit_deliverable": {
+    "status": "ready_for_review",
+    "scope": "AGENTS instructions, requirement audit and verification evidence only",
+    "application_changes_in_this_revision": false
+  },
+  "groups": [
+    {
+      "id": "V01",
+      "sections": [
+        0,
+        1,
+        2,
+        12,
+        15
+      ],
+      "title": "Typed package scope and ownership",
+      "implementation_status": "present",
+      "verification_status": "source_review",
+      "note": "VideoRoom-specific typed API and application-independent service remain separate from Django and core; services are scoped instances, not a global singleton.",
+      "evidence": [
+        "jrtc-video/src/jrtc_video/plugin.py",
+        "jrtc-video/src/jrtc_video/models.py",
+        "jrtc-video/src/jrtc_video/service.py"
+      ]
+    },
+    {
+      "id": "V02",
+      "sections": [
+        3,
+        4,
+        5,
+        16,
+        17
+      ],
+      "title": "Lazy management reuse and concurrent first use",
+      "implementation_status": "present",
+      "verification_status": "source_review",
+      "note": "A management lock serializes lazy attach/commands, a whitelist excludes participant methods, and focused tests assert one attach/reuse.",
+      "evidence": [
+        "jrtc-video/src/jrtc_video/service.py#async def _get_management_plugin_locked",
+        "jrtc-video/src/jrtc_video/service.py#async def management_command",
+        "jrtc-video/tests/test_plugin_service.py#test_concurrent_first_management_use_attaches_exactly_once"
+      ]
+    },
+    {
+      "id": "V03",
+      "sections": [
+        6,
+        13,
+        20
+      ],
+      "title": "Participant separation and delegated ICE",
+      "implementation_status": "present",
+      "verification_status": "source_review",
+      "note": "Publisher/subscriber wrappers retain dedicated handles and forward whole candidate sequences to generic JRTC. Tests check separation and one ordered non-waiting ICE request.",
+      "evidence": [
+        "jrtc-video/src/jrtc_video/service.py#class Publisher",
+        "jrtc-video/src/jrtc_video/service.py#class Subscriber",
+        "jrtc-video/tests/test_plugin_service.py#test_ice_sequence_stays_one_ordered_non_waiting_request"
+      ]
+    },
+    {
+      "id": "V04",
+      "sections": [
+        7,
+        9
+      ],
+      "title": "Deterministic close and invalidation races",
+      "implementation_status": "partial",
+      "verification_status": "reproduced_gap",
+      "note": "Normal close is locked/idempotent, but cancellation while awaiting _management_lock enters finally and sets _closed=True before cleanup. The management reference remains and the next aclose returns immediately. Existing close tests do not cover this cancellation.",
+      "evidence": [
+        "jrtc-video/src/jrtc_video/service.py#async def aclose(self, *, graceful: bool = True)",
+        "jrtc-video/tests/test_plugin_service.py#test_close_waits_for_in_flight_management_command"
+      ]
+    },
+    {
+      "id": "V05",
+      "sections": [
+        8,
+        11,
+        18,
+        19
+      ],
+      "title": "Session loss and error classification",
+      "implementation_status": "present",
+      "verification_status": "source_review",
+      "note": "Session/generation/registry checks invalidate stale management plugins; domain errors normally retain them. Tests cover generation changes and transport/domain errors. Replacement of the actual session object requires a new service owned by the application.",
+      "evidence": [
+        "jrtc-video/src/jrtc_video/service.py#def _management_plugin_is_usable",
+        "jrtc-video/src/jrtc_video/service.py#def _failure_invalidates_management_plugin",
+        "jrtc-video/tests/test_plugin_service.py#test_session_generation_change_invalidates_without_stale_detach"
+      ]
+    },
+    {
+      "id": "V06",
+      "sections": [
+        10
+      ],
+      "title": "No replay of confirmed commands after cleanup failure",
+      "implementation_status": "present",
+      "verification_status": "source_review",
+      "note": "Management cleanup failures are counted without replacing a successful result or retrying the command. A focused test verifies this rule.",
+      "evidence": [
+        "jrtc-video/src/jrtc_video/service.py#async def _dispose_management_plugin",
+        "jrtc-video/tests/test_plugin_service.py#test_management_detach_failure_is_observable_not_retried"
+      ]
+    },
+    {
+      "id": "V07",
+      "sections": [
+        14
+      ],
+      "title": "Application integration API",
+      "implementation_status": "present",
+      "verification_status": "source_review",
+      "note": "VideoRoomService exposes typed helpers, management_command, invalidation, metrics and aclose. Synq consumption is separately missing and must not be confused with package API absence.",
+      "evidence": [
+        "jrtc-video/src/jrtc_video/__init__.py",
+        "jrtc-video/README.md",
+        "jrtc-video/src/jrtc_video/service.py"
+      ]
+    },
+    {
+      "id": "V08",
+      "sections": [
+        21
+      ],
+      "title": "Low-cost lifecycle metrics",
+      "implementation_status": "present",
+      "verification_status": "source_review",
+      "note": "Immutable metrics snapshots include attaches, reuse, invalidation, detach failures, command duration and error categories.",
+      "evidence": [
+        "jrtc-video/src/jrtc_video/service.py#class VideoRoomServiceMetrics"
+      ]
+    },
+    {
+      "id": "V09",
+      "sections": [
+        22
+      ],
+      "title": "Management request-count benchmark",
+      "implementation_status": "partial",
+      "verification_status": "external_not_verified",
+      "note": "The deterministic benchmark compares temporary versus persistent fake sessions and asserts 1 attach/N commands/1 detach/zero residual handles. It was not executed here and is not live Janus latency evidence.",
+      "evidence": [
+        "jrtc-video/benchmarks/benchmark_management_handles.py",
+        "jrtc-video/README.md"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "V-T01",
+      "title": "Make service close cancellation-safe",
+      "priority": "P1",
+      "dependencies": [],
+      "scope": "VideoRoomService.aclose; lifecycle tests",
+      "acceptance": "Cancel close while a management command owns the lock, during attach, during detach and while participant creation is pending. Do not publish closed=True until owned cleanup is completed or a bounded cleanup owner can finish it. A repeated close must complete remaining cleanup. Preserve CancelledError to callers, prevent reopen/duplicate detach, bound teardown and never replay a confirmed state-changing command.",
+      "status": "not_started",
+      "implementation_commit": null,
+      "verification_evidence": [],
+      "review_status": "not_requested"
+    },
+    {
+      "id": "V-T02",
+      "title": "Verify lifecycle integration and release API",
+      "priority": "P1",
+      "dependencies": [
+        "V-T01"
+      ],
+      "scope": "package tests/docs; Synq adapter integration",
+      "acceptance": "Run model/service tests with the selected JRTC wheel. Prove same session reuse and separate publisher/subscriber roles; replacement session gets a new service, never an adopted stale ID. Document fixed-session ownership and supported package release bounds. Verify Synq closes management services before destroying sessions.",
+      "status": "not_started",
+      "implementation_commit": null,
+      "verification_evidence": [],
+      "review_status": "not_requested"
+    },
+    {
+      "id": "V-T03",
+      "title": "Record structural and live performance evidence",
+      "priority": "P2",
+      "dependencies": [
+        "V-T01",
+        "V-T02"
+      ],
+      "scope": "management benchmark; exact Janus deployment",
+      "acceptance": "Run 100 list-participant commands and mixed management commands; record attach/command/detach counts, p50/p95, CPU and residual handles including cancellation/recovery. Distinguish fake-session request-count assertions from live latency. Confirm concurrent command serialization is acceptable before changing lock granularity.",
+      "status": "not_started",
+      "implementation_commit": null,
+      "verification_evidence": [],
+      "review_status": "not_requested"
+    }
+  ],
+  "verification_limits": "The package tests and fake-session benchmark were inspected but not run because the required JRTC/Broka/logvista/pytest environment was unavailable. A focused AST extraction executed the actual service aclose method with a held management lock, cancelled it, and confirmed closed=True with the cached plugin still present after a second close. It does not simulate a live Janus server.",
+  "cross_repository_dependencies": {
+    "synq": {
+      "repo": "synq",
+      "branch": "v4",
+      "sha": "2d8682701300f27ab3771e9ea72413b3f7631a49",
+      "tree": "f0f72982ff3da0c11c3d555b07836e5a171acede"
+    },
+    "jrtc": {
+      "repo": "jrtc",
+      "branch": "main",
+      "sha": "de64c1e02b550049c8253fdef7d47a87b765c9e8",
+      "tree": "20fad7a45b261dd2f77e9bfd847b0cae2a78c38d"
+    },
+    "jrtc-plugins": {
+      "repo": "jrtc-plugins",
+      "branch": "main",
+      "sha": "bec03a533ab3af33c1deef822e8249f123a007dc",
+      "tree": "49bf501508a0faa60c0007ee17edd63c29aae418"
+    },
+    "synq.js": {
+      "repo": "synq.js",
+      "branch": "codex/batched-ice-meeting-sounds",
+      "sha": "da471c92989ccf28a26de14d6ec4d1356c647bed",
+      "tree": "df332f1cbcfe6084f86e17a436f31054a88461d3"
+    }
+  }
+}
