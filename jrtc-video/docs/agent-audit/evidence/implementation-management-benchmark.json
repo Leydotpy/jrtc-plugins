@@ -1,0 +1,22 @@
+{
+  "commands": 100,
+  "persistent_handle": {
+    "attach_count": 1,
+    "command_count": 100,
+    "cpu_ms": 8.88461800000001,
+    "detach_count": 1,
+    "handles_after_shutdown": 0,
+    "latency_ms_p50": 1.1394539999400877,
+    "latency_ms_p95": 1.2487349999901198
+  },
+  "simulated_transaction_latency_ms": 0.1,
+  "temporary_handle": {
+    "attach_count": 100,
+    "command_count": 100,
+    "cpu_ms": 25.993388000000007,
+    "detach_count": 100,
+    "handles_after_shutdown": 0,
+    "latency_ms_p50": 3.421187999947506,
+    "latency_ms_p95": 3.6320310000519385
+  }
+}

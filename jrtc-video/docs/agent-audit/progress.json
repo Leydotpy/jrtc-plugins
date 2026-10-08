@@ -167,10 +167,13 @@
       "dependencies": [],
       "scope": "VideoRoomService.aclose; lifecycle tests",
       "acceptance": "Cancel close while a management command owns the lock, during attach, during detach and while participant creation is pending. Do not publish closed=True until owned cleanup is completed or a bounded cleanup owner can finish it. A repeated close must complete remaining cleanup. Preserve CancelledError to callers, prevent reopen/duplicate detach, bound teardown and never replay a confirmed state-changing command.",
-      "status": "not_started",
-      "implementation_commit": null,
-      "verification_evidence": [],
-      "review_status": "not_requested"
+      "status": "ready_for_review",
+      "implementation_commit": "c91c9ada66076041b8890c7c971ce9d4792b750a",
+      "verification_evidence": [
+        "docs/agent-audit/IMPLEMENTATION.md"
+      ],
+      "review_status": "pending_maintainer_review",
+      "branch": "codex/implement-agent-plan-2026-10-08"
     },
     {
       "id": "V-T02",
@@ -181,10 +184,13 @@
       ],
       "scope": "package tests/docs; Synq adapter integration",
       "acceptance": "Run model/service tests with the selected JRTC wheel. Prove same session reuse and separate publisher/subscriber roles; replacement session gets a new service, never an adopted stale ID. Document fixed-session ownership and supported package release bounds. Verify Synq closes management services before destroying sessions.",
-      "status": "not_started",
-      "implementation_commit": null,
-      "verification_evidence": [],
-      "review_status": "not_requested"
+      "status": "in_progress",
+      "implementation_commit": "c91c9ada66076041b8890c7c971ce9d4792b750a",
+      "verification_evidence": [
+        "docs/agent-audit/IMPLEMENTATION.md"
+      ],
+      "review_status": "pending_maintainer_review",
+      "branch": "codex/implement-agent-plan-2026-10-08"
     },
     {
       "id": "V-T03",
@@ -196,10 +202,14 @@
       ],
       "scope": "management benchmark; exact Janus deployment",
       "acceptance": "Run 100 list-participant commands and mixed management commands; record attach/command/detach counts, p50/p95, CPU and residual handles including cancellation/recovery. Distinguish fake-session request-count assertions from live latency. Confirm concurrent command serialization is acceptable before changing lock granularity.",
-      "status": "not_started",
-      "implementation_commit": null,
-      "verification_evidence": [],
-      "review_status": "not_requested"
+      "status": "blocked",
+      "implementation_commit": "c91c9ada66076041b8890c7c971ce9d4792b750a",
+      "verification_evidence": [
+        "docs/agent-audit/IMPLEMENTATION.md"
+      ],
+      "review_status": "pending_maintainer_review",
+      "branch": "codex/implement-agent-plan-2026-10-08",
+      "blocker": "Live Janus/broker deployment and published release verification are not available in this workspace; synthetic evidence is recorded separately."
     }
   ],
   "verification_limits": "The package tests and fake-session benchmark were inspected but not run because the required JRTC/Broka/logvista/pytest environment was unavailable. A focused AST extraction executed the actual service aclose method with a held management lock, cancelled it, and confirmed closed=True with the cached plugin still present after a second close. It does not simulate a live Janus server.",
@@ -228,5 +238,11 @@
       "sha": "da471c92989ccf28a26de14d6ec4d1356c647bed",
       "tree": "df332f1cbcfe6084f86e17a436f31054a88461d3"
     }
+  },
+  "implementation_revision": {
+    "date": "2026-10-08",
+    "base_commit": "26fe283c2f65e745da03359c514a18361313adf4",
+    "branch": "codex/implement-agent-plan-2026-10-08",
+    "report": "docs/agent-audit/IMPLEMENTATION.md"
   }
 }
