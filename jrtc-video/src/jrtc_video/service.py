@@ -8,6 +8,7 @@ owns only the plugin handles it creates, never the Janus session itself.
 from __future__ import annotations
 
 import asyncio
+import math
 import time
 from collections.abc import Awaitable, Callable, Hashable, Sequence
 from contextlib import suppress
@@ -108,6 +109,8 @@ class VideoRoomServiceMetrics:
     management_domain_failures: int
     management_command_seconds_total: float
     management_command_seconds_max: float
+    close_failures: int = 0
+    close_timeouts: int = 0
 
 
 @dataclass(slots=True)
@@ -123,6 +126,8 @@ class _MutableServiceMetrics:
     management_domain_failures: int = 0
     management_command_seconds_total: float = 0.0
     management_command_seconds_max: float = 0.0
+    close_failures: int = 0
+    close_timeouts: int = 0
 
     def snapshot(self) -> VideoRoomServiceMetrics:
         return VideoRoomServiceMetrics(
@@ -137,6 +142,8 @@ class _MutableServiceMetrics:
             management_domain_failures=self.management_domain_failures,
             management_command_seconds_total=self.management_command_seconds_total,
             management_command_seconds_max=self.management_command_seconds_max,
+            close_failures=self.close_failures,
+            close_timeouts=self.close_timeouts,
         )
 
 
@@ -367,9 +374,13 @@ class Subscriber:
 class VideoRoomService:
     """Own related VideoRoom handles for one Janus session lifecycle."""
 
-    def __init__(self, session: Any) -> None:
+    def __init__(self, session: Any, *, close_timeout: float = 15.0) -> None:
         if session is None:
             raise TypeError("VideoRoomService requires a Janus session")
+        if not math.isfinite(close_timeout) or close_timeout <= 0:
+            raise ValueError("close_timeout must be finite and greater than zero")
+        self._close_timeout = close_timeout
+        self._close_task: asyncio.Task[None] | None = None
         self._session = session
         self._publishers: dict[tuple[JanusId, JanusId], Publisher] = {}
         self._subscribers: dict[tuple[JanusId, JanusId, Hashable], Subscriber] = {}
@@ -379,7 +390,6 @@ class VideoRoomService:
         ] = {}
         self._lock = asyncio.Lock()
         self._management_lock = asyncio.Lock()
-        self._close_lock = asyncio.Lock()
         self._management_plugin: VideoRoomPlugin | None = None
         self._management_generation: object | None = None
         self._metrics = _MutableServiceMetrics()
@@ -648,7 +658,7 @@ class VideoRoomService:
         try:
             publisher = await self._join_publisher_handle(request, timeout=timeout)
             async with self._lock:
-                if not self._closed:
+                if not self._closing and not self._closed:
                     self._publishers[key] = publisher
                     return publisher
             await publisher.aclose(graceful=False)
@@ -700,7 +710,7 @@ class VideoRoomService:
                 request, owner=owner, key=key, timeout=timeout
             )
             async with self._lock:
-                if not self._closed:
+                if not self._closing and not self._closed:
                     self._subscribers[map_key] = subscriber
                     return subscriber
             await subscriber.aclose(graceful=False)
@@ -1063,51 +1073,78 @@ class VideoRoomService:
         return True
 
     async def aclose(self, *, graceful: bool = True) -> None:
-        """Close every owned handle deterministically; leave the session running."""
+        """Join one cancellation-isolated, bounded cleanup attempt.
 
-        async with self._close_lock:
-            if self._closed:
-                return
-            self._closing = True
-            failures: list[Exception] = []
-            try:
-                # Management commands hold this lock for their complete
-                # invocation.  Close therefore cannot detach a healthy handle
-                # from underneath an in-flight command, and queued commands
-                # observe ``_closing`` before they can create another handle.
-                async with self._management_lock:
-                    management_plugin = self._management_plugin
-                    management_generation = self._management_generation
+        Caller cancellation propagates without cancelling the owned cleanup.
+        A timed-out/failed attempt leaves the service closing and retryable;
+        calling aclose again finishes retained resources. No new commands are
+        admitted once closing starts. The first caller chooses graceful mode.
+        """
+
+        if self._closed:
+            return
+        self._closing = True
+        if self._close_task is None or self._close_task.done():
+            self._close_task = asyncio.create_task(
+                self._close_owned_handles(graceful=graceful),
+                name="videoroom-service-close",
+            )
+            # Observe failures even when every waiting caller was cancelled.
+            self._close_task.add_done_callback(self._observe_close_result)
+        await asyncio.shield(self._close_task)
+
+    def _observe_close_result(self, task: asyncio.Task[None]) -> None:
+        error = None if task.cancelled() else task.exception()
+        if task.cancelled() or error is not None:
+            self._metrics.close_failures += 1
+        if isinstance(error, TimeoutError):
+            self._metrics.close_timeouts += 1
+
+    async def _close_owned_handles(self, *, graceful: bool) -> None:
+        async with asyncio.timeout(self._close_timeout):
+            # The lock covers the entire command. Timing out here retains the
+            # handle for a later close; it never detaches underneath a command.
+            async with self._management_lock:
+                plugin = self._management_plugin
+                if plugin is not None:
+                    await self._dispose_management_plugin(
+                        plugin,
+                        detach=self._can_detach_management_plugin(
+                            plugin, self._management_generation
+                        ),
+                    )
                     self._management_plugin = None
                     self._management_generation = None
-                    if management_plugin is not None:
-                        await self._dispose_management_plugin(
-                            management_plugin,
-                            detach=self._can_detach_management_plugin(
-                                management_plugin, management_generation
-                            ),
-                        )
 
-                async with self._lock:
-                    pending = [
-                        *self._pending_subscribers.values(),
-                        *self._pending_publishers.values(),
-                    ]
-                for task in pending:
-                    task.cancel()
-                if pending:
-                    await asyncio.gather(*pending, return_exceptions=True)
-                async with self._lock:
-                    owned = [*self._subscribers.values(), *self._publishers.values()]
-                    self._subscribers.clear()
-                    self._publishers.clear()
-                results = await asyncio.gather(
-                    *(item.aclose(graceful=graceful) for item in owned),
-                    return_exceptions=True,
-                )
-                failures.extend(result for result in results if isinstance(result, Exception))
-            finally:
-                self._closed = True
-                self._closing = False
+            async with self._lock:
+                pending = [
+                    *self._pending_subscribers.values(),
+                    *self._pending_publishers.values(),
+                ]
+            for task in pending:
+                task.cancel()
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
+
+            async with self._lock:
+                owned = [*self._subscribers.values(), *self._publishers.values()]
+
+            async def close_one(item: Publisher | Subscriber) -> None:
+                # A previous deadline may have interrupted leave before detach.
+                # Do not replay leave; detach is idempotent at the plugin layer.
+                if item.closed:
+                    await item.plugin.detach()
+                else:
+                    await item.aclose(graceful=graceful)
+
+            results = await asyncio.gather(
+                *(close_one(item) for item in owned), return_exceptions=True
+            )
+            failures = [result for result in results if isinstance(result, BaseException)]
             if failures:
-                raise ExceptionGroup("failed to close VideoRoom service handles", failures)
+                raise BaseExceptionGroup("failed to close VideoRoom service handles", failures)
+            async with self._lock:
+                self._subscribers.clear()
+                self._publishers.clear()
+            self._closed = True
+            self._closing = False
