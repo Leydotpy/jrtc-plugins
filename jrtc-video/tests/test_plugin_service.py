@@ -51,6 +51,8 @@ class FakeSession:
         self.send_release: asyncio.Event | None = None
         self.next_failure: BaseException | None = None
         self.detach_failure: Exception | None = None
+        self.detach_started = asyncio.Event()
+        self.detach_release: asyncio.Event | None = None
 
     async def attach(self, name: str, *, opaque_id=None):
         self.attach_started.set()
@@ -61,6 +63,9 @@ class FakeSession:
 
     async def detach(self, handle_id):
         self.detached.append(handle_id)
+        self.detach_started.set()
+        if self.detach_release is not None:
+            await self.detach_release.wait()
         if self.detach_failure is not None:
             raise self.detach_failure
         return {"janus": "success"}
@@ -178,6 +183,93 @@ class VideoRoomPluginTests(unittest.IsolatedAsyncioTestCase):
 
 
 class VideoRoomServiceTests(unittest.IsolatedAsyncioTestCase):
+    async def test_cancelled_close_during_command_retains_cleanup_owner(self) -> None:
+        session = FakeSession()
+        service = VideoRoomService(session)
+        session.send_release = asyncio.Event()
+        command = asyncio.create_task(service.list_participants(1234))
+        await session.send_started.wait()
+        close = asyncio.create_task(service.aclose())
+        await asyncio.sleep(0)
+        close.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await close
+        self.assertFalse(service.closed)
+        self.assertTrue(service.closing)
+        self.assertEqual(session.detached, [])
+        session.send_release.set()
+        await command
+        await service.aclose()
+        self.assertTrue(service.closed)
+        self.assertEqual(session.detached, [11])
+
+    async def test_cancelled_close_during_detach_is_not_replayed(self) -> None:
+        session = FakeSession()
+        service = VideoRoomService(session)
+        await service.list_participants(1234)
+        session.detach_release = asyncio.Event()
+        close = asyncio.create_task(service.aclose())
+        await session.detach_started.wait()
+        close.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await close
+        self.assertFalse(service.closed)
+        session.detach_release.set()
+        await service.aclose()
+        self.assertTrue(service.closed)
+        self.assertEqual(session.detached, [11])
+
+    async def test_close_deadline_waiting_for_command_is_retryable(self) -> None:
+        session = FakeSession()
+        service = VideoRoomService(session, close_timeout=0.01)
+        session.send_release = asyncio.Event()
+        command = asyncio.create_task(service.list_participants(1234))
+        await session.send_started.wait()
+        with self.assertRaises(TimeoutError):
+            await service.aclose()
+        self.assertFalse(service.closed)
+        self.assertTrue(service.closing)
+        self.assertEqual(session.detached, [])
+        self.assertEqual(service.metrics.close_timeouts, 1)
+        session.send_release.set()
+        await command
+        await service.aclose()
+        self.assertTrue(service.closed)
+        self.assertEqual(session.detached, [11])
+
+    async def test_cancelled_close_during_management_attach_cleans_new_handle(self) -> None:
+        from jrtc_video import VideoRoomLifecycleError
+
+        session = FakeSession()
+        service = VideoRoomService(session)
+        session.attach_release = asyncio.Event()
+        command = asyncio.create_task(service.list_participants(1234))
+        await session.attach_started.wait()
+        close = asyncio.create_task(service.aclose())
+        await asyncio.sleep(0)
+        close.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await close
+        session.attach_release.set()
+        with self.assertRaises(VideoRoomLifecycleError):
+            await command
+        await service.aclose()
+        self.assertEqual(session.messages, [])
+        self.assertEqual(session.detached, [11])
+
+    async def test_close_cancels_pending_participant_join(self) -> None:
+        session = FakeSession()
+        service = VideoRoomService(session)
+        session.send_release = asyncio.Event()
+        publisher = asyncio.create_task(service.publisher(room=1234, participant=99))
+        await session.send_started.wait()
+        await service.aclose()
+        with self.assertRaises(asyncio.CancelledError):
+            await publisher
+        self.assertTrue(service.closed)
+        self.assertEqual(session.detached, [11])
+        self.assertEqual(service._pending_publishers, {})
+
     async def test_management_commands_reuse_one_handle_and_close_once(self) -> None:
         session = FakeSession()
         service = VideoRoomService(session)

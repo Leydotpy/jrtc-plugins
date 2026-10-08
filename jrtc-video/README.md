@@ -78,3 +78,20 @@ Outbound models serialize only explicitly supplied options. Inbound response
 models retain unknown fields for compatibility with newer Janus servers.
 
 Protocol reference: <https://janus.conf.meetecho.com/docs/videoroom.html>
+
+## Cancellation-safe shutdown (3.0.3)
+
+`VideoRoomService(session, close_timeout=15.0)` owns one actual session object;
+create a new service for a replacement session. Close the service before its
+session is destroyed. The first `aclose(graceful=...)` caller chooses the mode.
+Concurrent callers join the same owned cleanup task. Cancelling a caller preserves
+its `CancelledError` while cleanup continues, bounded by `close_timeout` seconds.
+A timeout leaves `closing=True`, `closed=False`; repeat `aclose()` after the
+in-flight command settles to finish retained resources. No new command can reopen
+a closing service. Close never detaches a healthy handle during its active command.
+
+If detach itself times out, the remote outcome is unknown; JRTC closes the local
+plugin and a repeated close does not replay the sent detach or a confirmed room
+command. Session teardown remains the final owner of remote resources. Observe
+`close_failures`, `close_timeouts`, and management detach counters. The budget
+assumes normal cooperative asyncio cancellation in injected sessions/plugins.

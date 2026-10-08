@@ -1,14 +1,16 @@
 # jrtc-video — concern-by-concern work plan
 
-The audit/instruction change is ready for review. The implementation tasks below are **not started by this documentation change**. Existing code is credited in requirements.csv; tasks describe the remaining corrections or verification, not a request to repeat completed features.
+Implementation update 2026-10-08: local implementations and evidence are ready for review; the final live acceptance task remains blocked. See [IMPLEMENTATION.md](IMPLEMENTATION.md). The audit-only statement below describes the historical documentation change.
+
+The audit/instruction change is ready for review. The initial audit left the tasks pending. Current implementation evidence is in [IMPLEMENTATION.md](IMPLEMENTATION.md). Existing code is credited in requirements.csv; tasks describe the remaining corrections or verification, not a request to repeat completed features.
 
 Task IDs are unique across the four repositories: S=Synq, F=frontend, C=core, V=VideoRoom. A dependency in another repository refers to that repository's WORK_PLAN.md. Dependencies gate integration/release; isolated test preparation may proceed earlier. No task requires automatic delegation to other agents.
 
 | Task | Priority | Dependencies | State |
 | --- | --- | --- | --- |
-| V-T01 — Make service close cancellation-safe | P1 | None | not_started |
-| V-T02 — Verify lifecycle integration and release API | P1 | V-T01 | not_started |
-| V-T03 — Record structural and live performance evidence | P2 | V-T01, V-T02 | not_started |
+| V-T01 — Make service close cancellation-safe | P1 | None | ready_for_review |
+| V-T02 — Verify lifecycle integration and release API | P1 | V-T01 | ready_for_review |
+| V-T03 — Record structural and live performance evidence | P2 | V-T01, V-T02 | blocked |
 
 ## V-T01 — Make service close cancellation-safe
 
