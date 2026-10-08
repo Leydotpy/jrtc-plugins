@@ -12,9 +12,6 @@ package = false
 members = ["jrtc-*"]
 exclude = ["jrtc-stream"]
 
-[tool.uv.sources]
-jrtc = { path = "../main/v3.1", editable = true }
-
 [dependency-groups]
 dev = [
   "build>=1.2,<2,!=1.5.1",
