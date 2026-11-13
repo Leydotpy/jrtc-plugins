@@ -14,7 +14,13 @@ from typing import Annotated, Any, Generic, Literal, TypeAlias, TypeVar
 
 from jrtc.models.base import Jsep
 from jrtc.models.common import JanusId, LooseBaseModel, StrictBaseModel
-from pydantic import BaseModel, Field, StringConstraints, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    StringConstraints,
+    ValidationError,
+    model_validator,
+)
 
 from .errors import VideoRoomJanusError, VideoRoomPluginError, VideoRoomProtocolError
 
@@ -206,10 +212,18 @@ class RtpForwardStream(StrictBaseModel):
             )
         )
         if self.simulcast is True and separate_layers:
-            raise ValueError("simulcast=True cannot be combined with separate layer targets")
-        if any(value is not None for value in (self.ssrc_2, self.pt_2)) and self.port_2 is None:
+            raise ValueError(
+                "simulcast=True cannot be combined with separate layer targets"
+            )
+        if (
+            any(value is not None for value in (self.ssrc_2, self.pt_2))
+            and self.port_2 is None
+        ):
             raise ValueError("port_2 is required for second-layer SSRC or payload type")
-        if any(value is not None for value in (self.ssrc_3, self.pt_3)) and self.port_3 is None:
+        if (
+            any(value is not None for value in (self.ssrc_3, self.pt_3))
+            and self.port_3 is None
+        ):
             raise ValueError("port_3 is required for third-layer SSRC or payload type")
         return self
 
@@ -228,7 +242,9 @@ class VideoRoomRtpForwardRequest(StrictBaseModel):
     @model_validator(mode="after")
     def _targets_and_srtp(self) -> VideoRoomRtpForwardRequest:
         if self.host is None and any(stream.host is None for stream in self.streams):
-            raise ValueError("each stream needs host when the request has no global host")
+            raise ValueError(
+                "each stream needs host when the request has no global host"
+            )
         if (self.srtp_suite is None) != (self.srtp_crypto is None):
             raise ValueError("srtp_suite and srtp_crypto must be provided together")
         return self
@@ -690,7 +706,7 @@ class SubscriberStreamInfo(LooseBaseModel):
     mid: str | None = None
     type: MediaType
     active: bool | None = None
-    feed_id: JanusId
+    feed_id: JanusId | None = None
     feed_mid: str | None = None
     feed_display: str | None = None
     send: bool | None = None
@@ -704,6 +720,14 @@ class SubscriberStreamInfo(LooseBaseModel):
     sources: int | None = None
     source_ids: list[JanusId] | None = None
     crossrefid: str | None = None
+
+    @model_validator(mode="after")
+    def require_active_media_source(self) -> SubscriberStreamInfo:
+        # Janus retains inactive m-lines after their publisher is removed. Data
+        # m-lines can also aggregate sources through source_ids instead.
+        if self.type != "data" and self.active is not False and self.feed_id is None:
+            raise ValueError("Active media streams require feed_id")
+        return self
 
 
 class ForwarderInfo(LooseBaseModel):
@@ -988,7 +1012,9 @@ def parse_videoroom_response(payload: Any) -> VideoRoomReply[VideoRoomResponse]:
         plugin_data = _mapping(outer.get("plugindata"), context="plugindata")
         plugin = plugin_data.get("plugin")
         if plugin != "janus.plugin.videoroom":
-            raise VideoRoomProtocolError(f"expected janus.plugin.videoroom, received {plugin!r}")
+            raise VideoRoomProtocolError(
+                f"expected janus.plugin.videoroom, received {plugin!r}"
+            )
         data = _mapping(plugin_data.get("data"), context="plugin data")
         jsep_payload = outer.get("jsep")
     else:

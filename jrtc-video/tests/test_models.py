@@ -92,7 +92,9 @@ class VideoRoomRequestTests(unittest.TestCase):
                 "streams": [{"feed": 2}],
             },
         )
-        configure = SubscriberConfigureRequest(streams=[SubscriberStreamControl(mid="1")])
+        configure = SubscriberConfigureRequest(
+            streams=[SubscriberStreamControl(mid="1")]
+        )
         self.assertEqual(
             wire(configure),
             {"request": "configure", "streams": [{"mid": "1"}]},
@@ -100,9 +102,15 @@ class VideoRoomRequestTests(unittest.TestCase):
         self.assertNotIn("restart", wire(configure))
 
     def test_subscribe_unsubscribe_and_switch_use_distinct_targets(self) -> None:
-        subscribe = SubscriberSubscribeRequest(streams=[SubscribeTarget(feed=2, mid="video")])
-        unsubscribe = SubscriberUnsubscribeRequest(streams=[UnsubscribeTarget(sub_mid="1")])
-        switch = SubscriberSwitchRequest(streams=[SwitchTarget(feed=3, mid="video", sub_mid="1")])
+        subscribe = SubscriberSubscribeRequest(
+            streams=[SubscribeTarget(feed=2, mid="video")]
+        )
+        unsubscribe = SubscriberUnsubscribeRequest(
+            streams=[UnsubscribeTarget(sub_mid="1")]
+        )
+        switch = SubscriberSwitchRequest(
+            streams=[SwitchTarget(feed=3, mid="video", sub_mid="1")]
+        )
         self.assertEqual(wire(subscribe)["streams"], [{"feed": 2, "mid": "video"}])
         self.assertEqual(wire(unsubscribe)["streams"], [{"sub_mid": "1"}])
         self.assertEqual(
@@ -262,9 +270,13 @@ class VideoRoomResponseTests(unittest.TestCase):
 
     def test_typed_errors(self) -> None:
         with self.assertRaises(VideoRoomJanusError):
-            parse_videoroom_response({"janus": "error", "error": {"code": 403, "reason": "denied"}})
+            parse_videoroom_response(
+                {"janus": "error", "error": {"code": 403, "reason": "denied"}}
+            )
         with self.assertRaises(VideoRoomPluginError):
-            parse_videoroom_response({"videoroom": "event", "error_code": 426, "error": "no room"})
+            parse_videoroom_response(
+                {"videoroom": "event", "error_code": 426, "error": "no room"}
+            )
         with self.assertRaises(VideoRoomProtocolError):
             parse_videoroom_response(
                 {
@@ -272,6 +284,60 @@ class VideoRoomResponseTests(unittest.TestCase):
                     "plugindata": {"plugin": "janus.plugin.sip", "data": {}},
                 }
             )
+
+    def test_inactive_subscriber_slot_can_omit_source(self) -> None:
+        reply = parse_videoroom_response(
+            {
+                "videoroom": "updated",
+                "room": 1,
+                "streams": [
+                    {"type": "audio", "mid": "0", "active": False, "ready": False}
+                ],
+            }
+        )
+        self.assertIsNone(reply.data.streams[0].feed_id)
+        self.assertFalse(reply.data.streams[0].active)
+
+    def test_active_media_slots_still_require_valid_feed_ids(self) -> None:
+        for active in [True, None]:
+            for feed in [None, 0, -1, True]:
+                with (
+                    self.subTest(active=active, feed=feed),
+                    self.assertRaises(VideoRoomProtocolError),
+                ):
+                    parse_videoroom_response(
+                        {
+                            "videoroom": "updated",
+                            "room": 1,
+                            "streams": [
+                                {
+                                    "type": "audio",
+                                    "mid": "0",
+                                    "active": active,
+                                    "feed_id": feed,
+                                }
+                            ],
+                        }
+                    )
+
+    def test_data_subscription_can_aggregate_source_ids(self) -> None:
+        reply = parse_videoroom_response(
+            {
+                "videoroom": "attached",
+                "room": 1,
+                "streams": [
+                    {
+                        "type": "data",
+                        "mid": "0",
+                        "active": True,
+                        "sources": 2,
+                        "source_ids": [2, 3],
+                    }
+                ],
+            }
+        )
+        self.assertIsNone(reply.data.streams[0].feed_id)
+        self.assertEqual(reply.data.streams[0].source_ids, [2, 3])
 
 
 if __name__ == "__main__":
