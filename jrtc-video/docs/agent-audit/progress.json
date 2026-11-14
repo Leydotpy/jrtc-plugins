@@ -217,16 +217,19 @@
       "priority": "P1",
       "dependencies": [],
       "scope": "Typed response models and SG-12 consumer compatibility",
-      "status": "in_progress",
+      "status": "ready_for_review",
       "implementation_status": "present",
       "verification_status": "runtime_subset_passed",
       "review_status": "pending_maintainer_review",
       "branch": "codex/gateway-subscriber-compat",
       "base_commit": "87bbb9b79870724a91fc98f8711c55f5cb4519e2",
       "verification_evidence": [
-        "docs/agent-audit/SG-12.md"
+        "docs/agent-audit/SG-12.md",
+        "https://github.com/Leydotpy/synq.js/actions/runs/43563938796",
+        "https://github.com/Leydotpy/jrtc-signalling/actions/runs/43477071495"
       ],
-      "acceptance": "Typed inactive/data replies parse; active media still needs strict feed IDs; installed consumers and the actual SG-12 browser integration pass."
+      "acceptance": "Typed inactive/data replies parse; active media still needs strict feed IDs; installed consumers and the actual SG-12 browser integration pass.",
+      "implementation_commit": "eed430960cc88fa574370d62eae502093757a9f1"
     }
   ],
   "verification_limits": "The package tests and fake-session benchmark were inspected but not run because the required JRTC/Broka/logvista/pytest environment was unavailable. A focused AST extraction executed the actual service aclose method with a held management lock, cancelled it, and confirmed closed=True with the cached plugin still present after a second close. It does not simulate a live Janus server.",
